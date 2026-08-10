@@ -555,7 +555,7 @@ export async function getDailySummary(userId: string): Promise<DailySummary> {
     const weekCurriculum = getWeekCurriculum(currentWeek);
     const dayOfWeek = new Date().getDay();
     const ieltsFocus = getIELTSFocusForDay(dayOfWeek);
-    const reviewsDue = tasks.filter((t) => t.status === 'REVIEW_DUE').length;
+    const reviewsDue = tasks.filter((t: any) => t.status === 'REVIEW_DUE').length;
 
     const progress = await prisma.learningProgress.findUnique({
       where: { userId_date: { userId, date: today } },

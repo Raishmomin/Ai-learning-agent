@@ -34,7 +34,7 @@ export async function GET() {
     });
 
     const latestStreak = progressList[0]?.streak ?? 0;
-    const activeDays = progressList.filter((p) => p.tasksCompleted > 0).length;
+    const activeDays = progressList.filter((p: any) => p.tasksCompleted > 0).length;
 
     return NextResponse.json({
       progress: progressList.reverse(),
