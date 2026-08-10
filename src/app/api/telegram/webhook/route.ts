@@ -285,7 +285,13 @@ function formatFullTaskMessage(t: any, taskNum: number, totalTasks: number): str
     msg += `💬 <b>HOW TO SUBMIT ANSWER:</b>\nType your solution here on Telegram to evaluate & complete!`;
   }
 
-  msg += `\n\n🌐 <i>Or practice on Dashboard: http://localhost:3000/dashboard/practice?taskId=${t.id}</i>`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.startsWith('http') 
+    ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+
+  msg += `\n\n🌐 <i>Or practice on Dashboard: ${appUrl}/dashboard/practice?taskId=${t.id}</i>`;
   return msg;
 }
 
