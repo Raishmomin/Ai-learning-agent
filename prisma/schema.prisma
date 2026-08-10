@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USER (single-user, but structured for future)
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  image     String?
+  timezone  String   @default("Asia/Kolkata")
+  preferences Json?  // daily schedule, notification settings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plans        LearningPlan[]
+  progress     LearningProgress[]
+  applications JobApplication[]
+  interviews   InterviewSession[]
+
+  @@map("users")
+}
+
+// ============================================
+// LEARNING PLAN & CURRICULUM
+// ============================================
+
+model LearningPlan {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  title       String
+  description String?  @db.Text
+  startDate   DateTime
+  endDate     DateTime
+  config      Json?    // weekly themes, daily schedule preferences
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics LearningTopic[]
+  tasks  LearningTask[]
+
+  @@index([userId])
+  @@map("learning_plans")
+}
+
+model LearningTopic {
+  id          String        @id @default(cuid())
+  planId      String
+  title       String
+  description String?       @db.Text
+  category    TopicCategory
+  weekNumber  Int
+  order       Int           @default(0)
+  isCompleted Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  plan  LearningPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  tasks LearningTask[]
+
+  @@index([planId])
+  @@index([weekNumber])
+  @@map("learning_topics")
+}
+
+model LearningTask {
+  id              String             @id @default(cuid())
+  planId          String
+  topicId         String?
+  title           String
+  description     String?            @db.Text
+  type            TaskType
+  content         Json?              // question, code template, flashcard data
+  solution        Json?              // correct answer, model solution
+  difficulty      Difficulty         @default(MEDIUM)
+  status          LearningTaskStatus @default(PENDING)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  score           Float?
+  feedback        String?            @db.Text
+  userAnswer      String?            @db.Text
+  timeSpentSec    Int?
+  allocatedSec    Int?               // Timer: allocated seconds
+  overtimeSec     Int?               // Timer: overtime seconds
+  startedAt       DateTime?          // Timer: started timestamp
+
+  // Spaced Repetition (SM-2)
+  repetitionLevel Int      @default(0)
+  nextReviewDate  DateTime?
+  reviewCount     Int      @default(0)
+  easeFactor      Float    @default(2.5)
+  interval        Int      @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan  LearningPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  topic LearningTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([planId])
+  @@index([topicId])
+  @@index([status])
+  @@index([nextReviewDate])
+  @@index([dueDate])
+  @@map("learning_tasks")
+}
+
+// ============================================
+// PROGRESS TRACKING
+// ============================================
+
+model LearningProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  date           String   // YYYY-MM-DD
+  tasksCompleted Int      @default(0)
+  tasksTotal     Int      @default(0)
+  avgScore       Float?
+  codingScore    Float?
+  dsaScore       Float?
+  designScore    Float?
+  englishScore   Float?
+  studyMinutes   Int      @default(0)
+  streak         Int      @default(0)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("learning_progress")
+}
+
+// ============================================
+// INTERVIEW SESSIONS
+// ============================================
+
+model InterviewSession {
+  id          String        @id @default(cuid())
+  userId      String
+  type        InterviewType
+  difficulty  Difficulty    @default(MEDIUM)
+  topic       String?
+  messages    Json          // chat history
+  score       Float?
+  feedback    String?       @db.Text
+  durationSec Int?
+  createdAt   DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("interview_sessions")
+}
+
+// ============================================
+// JOB APPLICATIONS
+// ============================================
+
+model JobApplication {
+  id           String            @id @default(cuid())
+  userId       String
+  company      String
+  position     String
+  location     String?
+  url          String?
+  status       ApplicationStatus @default(SAVED)
+  appliedAt    DateTime?
+  followUpAt   DateTime?
+  notes        String?           @db.Text
+  salary       String?
+  contactName  String?
+  contactEmail String?
+  coverLetter  String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("job_applications")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum TopicCategory {
+  DSA
+  SYSTEM_DESIGN
+  JAVASCRIPT
+  REACT_NEXTJS
+  DEVOPS
+  AI_ML
+  ENGLISH
+  BEHAVIOURAL
+  NETWORKING
+  PROJECT
+  TYPESCRIPT
+  NODEJS
+  DATABASE
+  SECURITY
+  CLOUD_AWS
+  KUBERNETES
+  DOCKER
+  MONITORING
+  ARCHITECTURE
+  CASE_STUDY
+  IELTS
+  VOCABULARY
+}
+
+enum TaskType {
+  FLASHCARD
+  QUIZ
+  CODING_CHALLENGE
+  SYSTEM_DESIGN_QA
+  BEHAVIOURAL_QA
+  ENGLISH_SPEAKING
+  PROJECT_TASK
+  READING
+  REVIEW
+  DEEP_TECHNICAL
+  CASE_STUDY
+  ENGINEERING_CHALLENGE
+  PRODUCTION_INCIDENT
+  CODE_REVIEW
+  AI_ENGINEERING
+  DEVOPS_LAB
+  MOCK_INTERVIEW
+  IELTS_SPEAKING
+  IELTS_WRITING
+  IELTS_READING
+  IELTS_LISTENING
+  VOCABULARY
+  GRAMMAR
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum LearningTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+  REVIEW_DUE
+}
+
+enum InterviewType {
+  DSA
+  SYSTEM_DESIGN
+  BEHAVIOURAL
+  ENGLISH
+  AI_ENGINEERING
+  DEVOPS
+  ARCHITECTURE
+  HR
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
